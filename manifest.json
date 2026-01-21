@@ -1,0 +1,9 @@
+{
+  "name": "Buffet Generator ",
+  "short_name": "Buffet Generator ",
+  "theme_color": "#0e2b18",
+  "background_color": "#0a2112",
+  "display": "browser",
+  "scope": "/",
+  "start_url": "/index.html"
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buffet Generator</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+       
+       body {
+            font-family: Roboto, sans-serif;
+            margin: 20px;
+            background-color: #0a2112;
+        }
+        header {
+            color: #ffffff;
+            font-size: 2em;
+            margin-bottom: 20px;
+
+        }
+        div.Eingabe {
+            background-color: #0e2b18;
+            padding: 20px;
+            border-radius: 8px;
+            color: #ffffff;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        div.fertig {
+            margin-top: 20px;
+            background-color: #0e2b18;
+            padding: 20px;
+            border-radius: 8px;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <header>Buffet Generator</header>
+    <div class="Eingabe">
+        <h1 id="question">Was soll dein Buffet enthalten?</h1>
+        <form id="genform">
+            <input type="text" placeholder="tag">
+            <button type="submit">OK</button>
+        </form>
+
+    </div>
+    <div class="fertig">
+        <h2>Dein Buffet:</h2>
+        <pre id="buffet-output"></pre>
+    </div>
+
+<script>
+    const form = document.getElementById("genform");
+    const input = form.querySelector("input[type='text']");
+    const output = document.getElementById("buffet-output");
+    const question = document.getElementById("question");
+
+    let step = 1;
+    let requiredTags = [];
+    let forbiddenTags = [];
+
+    function parseCSV(s) {
+        return s.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault();
+        const userInput = input.value.trim();
+
+        if (step === 1) {
+            requiredTags = parseCSV(userInput);
+            step = 2;
+            input.value = "";
+            input.placeholder = "tags";
+            question.textContent = "Was soll das Buffet nicht enthalten?";
+            return;
+        }
+
+        forbiddenTags = parseCSV(userInput);
+        output.textContent = "Generating buffet...";
+
+        try {
+            const res = await fetch("/api/generate_buffet", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    required_tags: requiredTags,
+                    forbidden_tags: forbiddenTags
+                })
+            });
+            
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            }   catch (err) {
+                output.textContent = `kein JSON zurück gegben: (HTTP " + res.status * "). Antwort:\n" + text`;
+                return;
+            }
+
+            if (!res.ok) {
+                output.textContent = `Error: (HTTP " + res.status * "). Antwort:\n" + data.message ?? text`;
+                return;
+            }
+            if (!data.ok) {
+                output.textContent = data.message ?? "Buffet nicht gefunden.";
+                return;
+            }
+
+            output.textContent = data.buffet.map(item => `- ${item.name} (${item.category})`).join("\n");
+
+            step = 1;
+            requiredTags = [];
+            forbiddenTags = [];
+            question.textContent = "Was soll dein Buffet enthalten?";
+            input.value = "";
+
+        }   catch (err) {
+            output.textContent = `Error: ${err.message}`;
+        }
+    });
+
+    </script>
+</body>
+</html>
+
