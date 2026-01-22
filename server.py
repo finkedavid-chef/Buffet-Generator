@@ -25,11 +25,14 @@ class GenerateRequest(BaseModel):
     required_tags: List[str]
     forbidden_tags: List[str]
 
+def norm(tags: List[str]) -> List[str]:
+    return [t.strip().lower() for t in tags]
+
 @app.post("/api/generate_buffet")
 def api_generate_buffet(req: GenerateRequest):
     result = buffet.generate_Buffet(
-        required_tags=req.required_tags,
-        forbidden_tags=req.forbidden_tags
+        required_tags=norm(req.required_tags),
+        forbidden_tags=norm(req.forbidden_tags)
     )
     if not result:
         return {

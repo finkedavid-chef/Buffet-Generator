@@ -55,15 +55,32 @@ def satisfies_rules(Buffet: List[Item], rules: Dict):
 
 
 
-def generate_Buffet(required_tags: List[str], forbidden_tags: List[str], max_tries: int = 9000) -> List[Dict]:
+def generate_Buffet(required_tags: List[str], forbidden_tags: List[str], max_tries: int = 15000) -> List[Dict]:
     all_items =  Hauptgerichte + Sättigung + Beilagen + Desserts
+
+    pools = {
+        "Hauptgerichte": allowed_items(Hauptgerichte, set(forbidden_tags)),
+        "Sättigung": allowed_items(Sättigung, set(forbidden_tags)),
+        "Beilagen": allowed_items(Beilagen, set(forbidden_tags)),
+        "Desserts": allowed_items(Desserts, set(forbidden_tags)),
+    }
+    for _ in range(max_tries):
+        b = random_Buffet(pools)
+        if satisfies_rules(b, {
+            "required_tags": required_tags,
+            "forbidden_tags": forbidden_tags,
+            "unique_main": True,}):
+            return [{
+                "name": item.name, "category": item.category,
+                "tags": sorted(list(item.tags)), "main": item.main}
+            for item in b]
 
     rules = {
         "required_tags": required_tags,
         "forbidden_tags": forbidden_tags,
         "unique_main": True,}
     for _ in range(max_tries):
-        b = random_Buffet()
+        b = random_Buffet(pools)
         if satisfies_rules(b, rules):
             return [{
                 "name": item.name, "category": item.category,
@@ -72,20 +89,20 @@ def generate_Buffet(required_tags: List[str], forbidden_tags: List[str], max_tri
 
         return []
 
-Hauptgerichte = [Item("Kasslerbraten", "Hauptgericht", {"Schwein", "Braten", "Klassisch"}, "Schwein"),
-                Item("Rinderroulade", "Hauptgericht", {"Rind", "Braten", "Klassisch"}, "Rind"),
-                Item("Gullasch", "Hauptgericht", {"Rind", "Braten", "Klassisch"}, "Rind"),
-                Item("Hähnchen-Tomate-Morzarella", "Hauptgericht", {"Hühnchen", "Tomate", "Mozzarella", "Mediterran"}, "Hühnchen"),
-                Item("Lachs auf Grillgemüse", "Hauptgericht", {"Fisch", "Gemüse", "Mediterran", "Lachs", "Grillgemüse"}, "Fisch"),
-                Item("Zander auf Grillgemüse", "Hauptgericht", {"Zander", "Fisch", "Gemüse"}, "Fisch"),
-                Item("Blätterteig Zupfbrot", "Hauptgericht", {"Blätterteig", "Vegan", "Brot"}, "Vegan"),
+Hauptgerichte = [Item("Kasslerbraten", "Hauptgericht", {"Kassler", "Schwein", "Braten", "Klassisch"}, "Schwein"),
+                Item("Rinderroulade", "Hauptgericht", {"Rinderroulade", "Rind", "Braten", "Klassisch"}, "Rind"),
+                Item("Gullasch", "Hauptgericht", {"Gullasch", "Rind", "Braten", "Klassisch"}, "Rind"),
+                Item("Hähnchen-Tomate-Morzarella", "Hauptgericht", {"Hähnchen-Tomate-Morzarella", "Hühnchen", "Tomate", "Mozzarella", "Mediterran"}, "Hühnchen"),
+                Item("Lachs auf Grillgemüse", "Hauptgericht", { "Fisch", "Gemüse", "Mediterran", "Lachs", "Grillgemüse"}, "Fisch"),
+                Item("Zander auf Grillgemüse", "Hauptgericht", { "Zander", "Fisch", "Gemüse"}, "Fisch"),
+                Item("Blätterteig Zupfbrot", "Hauptgericht", {"Zupfbrot", "Blätterteig", "Vegan", "Brot"}, "Vegan"),
                 Item("Gemischte Warme Platte", "Hauptgericht", {"Schnitezl", "Bouletten", "Gnubbel", "Platte"}, "Schnitzel"),]
 Sättigung = [Item("Salzartoffel", "Sättigung", {"Salzartoffel", "Kartoffel"}, "Kartoffel"),
             Item("Klöße", "Sättigung", {"Klöße", "Kartoffel"}, "Kartoffel"),
             Item("Reis", "Sättigung", {"Reis", "Asia"}, "Reis"),
             Item("Böhmische Knödel", "Sättigung", {"Böhmische Knödel", "Knödel"}, "Kartoffel"),
             Item("Pommes", "Sättigung", {"Pommes"}, "Kartoffel"),
-            Item("Kartoffel-Spalten", "Sättigung", {"Kartoffel-Spalten"}, "Kartoffel"),]
+            Item("Kartoffel-Spalten", "Sättigung", {"Spalten", "Wedgets"}, "Kartoffel"),]
 Beilagen = [Item("Rotkohl", "Beilage", {"Rotkohl"}, "Kartoffel"),
             Item("Keisergemüse", "Beilage", {"Keisergemüse", "Gemüse"}, "Gemüse"),
             Item("Grillgemüse", "Beilage", {"Grillgemüse", "Gemüse"}, "Gemüse"),
@@ -96,8 +113,44 @@ Desserts = [Item("Schokoladenmousse", "Dessert", {"Schokoladenmousse"}, "Schokol
             Item("Cheesecake", "Dessert", {"Cheesecake"}, "Frischkäse"),
             Item("Waldbeercreme", "Dessert", {"Waldbeercreme", "Waldbeere", "Frucht"}, "Waldbeere"),
             Item("Waldmeister-Götterspeise", "Dessert", {"Waldmeister-Götterspeise", "Waldmeister"}, "Waldmeister"),
-            Item("Obstplatte", "Dessert", {"Obst", "Frucht"}, "Frucht"),]
+            Item("Obstplatte", "Dessert", {"Obst", "Frucht", "Laktosefrei"}, "Frucht"),]
 
+#A
+def canonical(s: str) -> str:
+   return s.strip().casefold()
+
+def normalize_item_tags(Items: list[Item]) -> None:
+    for item in Items:
+        item.tags = {canonical(tag) for tag in item.tags}
+        item.main = canonical(item.main)
+        item.category = item.category.strip()
+        item.name = item.name.strip()
+normalize_item_tags(Hauptgerichte)
+normalize_item_tags(Sättigung)
+normalize_item_tags(Beilagen)
+normalize_item_tags(Desserts)
+
+
+#B
+def allowed_items(Items: List[Item], forbidden_tags: Set[str]) -> List[Item]:
+   return [it for it in Items if it.tags.isdisjoint(forbidden_tags)]
+
+#C
+def feasibility_check(required: set[str], pools: dict[str, List[Item]]):
+    all_tags = set()
+    for lst in pools.values():
+        for item in lst:
+            all_tags |= item.tags
+    missing_tags = required - all_tags
+    if missing_tags:
+        return False, f"Die folgenden erforderlichen Tags können nicht erfüllt werden: {', '.join(sorted(missing_tags))}"
+    return True, ""
+
+
+
+
+
+    
 
 
 
@@ -142,27 +195,9 @@ def build_rules_from_user_input(all_items: list) -> Dict:
     required_tags = ask_tag_list("Was soll das Buffet entahlten (kommagetrennt, leer für keine): ", allowed_tags)
     forbidden_tags = ask_tag_list("was soll es nicht enthalten (kommagetrennt, leer für keine): ", allowed_tags)
     
-    def normalize_tags(tags: List[str], allowed_tags: List[str], forbidden_tags: List[str], cutoff: float = 0.6) -> List[str]:
-        allowed_map = {t.casefold(): t for t in allowed_tags}
-        normalized = []
-        for row in tags:
-            t = row.strp()
-            key = t.casefold()
+    
 
-            if key in allowed_map:
-                normalized.append(allowed_map[key])
-                continue
-
-            matches = get_close_matches(key, allowed_map.keys(), n=1, cutoff=cutoff)
-            if matches:
-                normalized.append(allowed_map[matches[0]])
-            else:
-                    normalized.append(t)
-        return normalized
-
-    required_tags = normalize_tags(required_tags, all_tags, allowed_tags, cutoff=0.6)
-    forbidden_tags = normalize_tags(forbidden_tags, all_tags, allowed_tags, cutoff=0.6)
-
+   
     rules = {
         "required_tags": required_tags,
         "forbidden_tags": forbidden_tags,
@@ -170,27 +205,21 @@ def build_rules_from_user_input(all_items: list) -> Dict:
     }
 
     return rules
-
-def random_Buffet() -> List[Item]:
-    hg1, hg2 = random.sample(Hauptgerichte, 2)
-    sg1, sg2 = random.sample(Sättigung, 2)
-    bg1, bg2 = random.sample(Beilagen, 2)
-    return [
-        hg1,
-        hg2,
-        sg1,
-        sg2,
-        bg1,
-        bg2,
-        random.choice(Desserts),
-    ]
+#D
+def random_Buffet(pools: Dict[str, List[Item]]) -> List[Item]:
+    print("pools keys:", pools.keys())
+    hg1, hg2 = random.sample(pools["Hauptgerichte"], 2)
+    sg1, sg2 = random.sample(pools["Sättigung"], 2)
+    bg1, bg2 = random.sample(pools["Beilagen"], 2)
+    dessert = random.choice(pools["Desserts"])
+    return [hg1, hg2, sg1, sg2, bg1, bg2, random.choice(pools["Desserts"])]
     
 def main():
     all_items =  Hauptgerichte + Hauptgerichte + Sättigung + Beilagen + Desserts
     user_rules = build_rules_from_user_input(all_items)
     required_tags = user_rules["required_tags"]
     forbidden_tags = user_rules["forbidden_tags"]
-    max_tries = 1000
+    max_tries = 5000
     for attempt in range(1, max_tries + 1):
         Buffet = random_Buffet()
         if satisfies_rules(Buffet, user_rules):
